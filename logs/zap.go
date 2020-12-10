@@ -14,14 +14,12 @@ type OutputOption struct {
 	Level   zapcore.Level
 }
 
-
-
-func NewZapLog(caller int,outputs ...OutputOption) *zap.Logger {
+func NewZapLog(caller int, outputs ...OutputOption) *zap.Logger {
 	if len(outputs) == 0 {
 		outputs = append(outputs, DefaultConsole())
 	}
-	if caller<0{
-		caller=0
+	if caller < 0 {
+		caller = 0
 	}
 
 	var cores []zapcore.Core
@@ -35,7 +33,6 @@ func NewZapLog(caller int,outputs ...OutputOption) *zap.Logger {
 	core := zapcore.NewTee(cores...)
 
 	logger := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(caller))
-
 
 	return logger
 
@@ -70,8 +67,10 @@ func DefaultConsole() OutputOption {
 }
 
 //默认文件输出配置
-func DefaultFile() OutputOption {
-
+func DefaultFile(filepath string) OutputOption {
+	if filepath == "" {
+		filepath = "log.log"
+	}
 	//默认开发配置
 	config := zap.NewDevelopmentEncoderConfig()
 
@@ -88,12 +87,12 @@ func DefaultFile() OutputOption {
 
 	//控制台Writer 写到标准输出，并发安全
 	hook := lumberjack.Logger{
-		Filename:   "log.log", // 日志文件路径
-		MaxSize:    100,       // megabytes
-		MaxBackups: 3,         // 最多保留3个备份
-		MaxAge:     7,         // days
-		LocalTime:  true,      // 本地时间戳
-		Compress:   true,      // 是否压缩 disabled by default
+		Filename:   filepath, // 日志文件路径
+		MaxSize:    100,      // megabytes
+		MaxBackups: 3,        // 最多保留3个备份
+		MaxAge:     7,        // days
+		LocalTime:  true,     // 本地时间戳
+		Compress:   true,     // 是否压缩 disabled by default
 	}
 	fileWriter := zapcore.AddSync(&hook)
 
