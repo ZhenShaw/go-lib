@@ -26,7 +26,7 @@ func TestDefaultKafka(t *testing.T) {
 
 	err = k.Subscribe(h)
 	if err != nil {
-		logs.Errorf(err.Error())
+		logs.Error(err.Error())
 		return
 	}
 
@@ -38,7 +38,7 @@ func TestDefaultKafka(t *testing.T) {
 
 		err = k.Publish(data)
 		if err != nil {
-			logs.Errorf(err.Error())
+			logs.Error(err.Error())
 			return
 		}
 
@@ -55,7 +55,7 @@ func customMsg(msg *sarama.ConsumerMessage) (err error) {
 		return
 	}
 
-	logs.Infof("消费了 %s:%d : %s", msg.Topic, msg.Offset, string(msg.Value))
+	logs.Info("消费了 %s:%d : %s", msg.Topic, msg.Offset, string(msg.Value))
 
 	return nil
 
@@ -66,5 +66,5 @@ func errHandler(h *ConsumeHandler, err error) {
 	if err == nil {
 		return
 	}
-	logs.Errorf("%s发生错误：%s", h.Topics, err.Error())
+	logs.Error("%s发生错误：%s", h.Topics, err.Error())
 }

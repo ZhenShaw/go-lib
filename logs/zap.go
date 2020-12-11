@@ -80,7 +80,7 @@ func DefaultFile(filepath string) OutputOption {
 	}
 
 	//输出带颜色
-	config.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	//config.EncodeLevel = zapcore.CapitalColorLevelEncoder
 
 	//使用控制台的编码格式
 	consoleEncoder := zapcore.NewConsoleEncoder(config)
