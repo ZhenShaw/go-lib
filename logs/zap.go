@@ -1,12 +1,32 @@
 package logs
 
 import (
+	"fmt"
+	"strings"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"gopkg.in/natefinch/lumberjack.v2"
-	"os"
-	"time"
 )
+
+var (
+	z *zap.Logger
+)
+
+func GlobalLogger() *zap.Logger {
+	return z
+}
+
+func InitLogger(caller int, opts ...OutputOption) *zap.Logger {
+	if len(opts) == 0 {
+		opts = append(opts, NewConsoleOption(zap.DebugLevel), DefaultFile())
+	}
+	z = NewZapLog(caller, opts...)
+	return z
+}
+
+func init() {
+	InitLogger(1)
+}
 
 type OutputOption struct {
 	Encoder zapcore.Encoder
@@ -15,91 +35,52 @@ type OutputOption struct {
 }
 
 func NewZapLog(caller int, outputs ...OutputOption) *zap.Logger {
-	if len(outputs) == 0 {
-		outputs = append(outputs, DefaultConsole())
-	}
-	if caller < 0 {
-		caller = 0
-	}
-
 	var cores []zapcore.Core
-
 	for _, v := range outputs {
-
 		core := zapcore.NewCore(v.Encoder, v.Writer, v.Level)
 		cores = append(cores, core)
 	}
-
-	core := zapcore.NewTee(cores...)
-
-	logger := zap.New(core, zap.AddCaller(), zap.AddCallerSkip(caller))
-
+	logger := zap.New(zapcore.NewTee(cores...), zap.AddCaller(), zap.AddCallerSkip(caller))
 	return logger
-
 }
 
-//默认控制台输出配置
-func DefaultConsole() OutputOption {
-
-	//默认开发配置
-	config := zap.NewDevelopmentEncoderConfig()
-
-	//自定义时间格式
-	config.EncodeTime = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-		enc.AppendString(t.Format("2006-01-02 15:04:05.000"))
-	}
-
-	//输出带颜色
-	config.EncodeLevel = zapcore.CapitalColorLevelEncoder
-
-	//使用控制台的编码格式
-	consoleEncoder := zapcore.NewConsoleEncoder(config)
-
-	//控制台Writer 写到标准输出，并发安全
-	consoleWriter := zapcore.Lock(os.Stdout)
-
-	opt := OutputOption{
-		Encoder: consoleEncoder,
-		Writer:  consoleWriter,
-		Level:   zap.DebugLevel,
-	}
-	return opt
+func Debug(f interface{}, v ...interface{}) {
+	z.Debug(FormatLog(f, v...))
 }
 
-//默认文件输出配置
-func DefaultFile(filepath string) OutputOption {
-	if filepath == "" {
-		filepath = "log.log"
+func Warn(f interface{}, v ...interface{}) {
+	z.Warn(FormatLog(f, v...))
+}
+
+func Info(f interface{}, v ...interface{}) {
+	z.Info(FormatLog(f, v...))
+}
+
+func Error(f interface{}, v ...interface{}) {
+	z.Error(FormatLog(f, v...))
+}
+
+func FormatLog(f interface{}, v ...interface{}) string {
+	var msg string
+	switch f.(type) {
+	case string:
+		msg = f.(string)
+		if len(v) == 0 {
+			return msg
+		}
+		if strings.Contains(msg, "%") && !strings.Contains(msg, "%%") {
+			//format string
+		} else {
+			//do not contain format char
+			msg += strings.Repeat(" %v", len(v))
+		}
+	default:
+		msg = fmt.Sprint(f)
+		if len(v) == 0 {
+			return msg
+		}
+		msg += strings.Repeat(" %v", len(v))
 	}
-	//默认开发配置
-	config := zap.NewDevelopmentEncoderConfig()
-
-	//自定义时间格式
-	config.EncodeTime = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-		enc.AppendString(t.Format("2006-01-02 15:04:05.000"))
-	}
-
-	//输出带颜色
-	//config.EncodeLevel = zapcore.CapitalColorLevelEncoder
-
-	//使用控制台的编码格式
-	consoleEncoder := zapcore.NewConsoleEncoder(config)
-
-	//控制台Writer 写到标准输出，并发安全
-	hook := lumberjack.Logger{
-		Filename:   filepath, // 日志文件路径
-		MaxSize:    100,      // megabytes
-		MaxBackups: 3,        // 最多保留3个备份
-		MaxAge:     7,        // days
-		LocalTime:  true,     // 本地时间戳
-		Compress:   true,     // 是否压缩 disabled by default
-	}
-	fileWriter := zapcore.AddSync(&hook)
-
-	opt := OutputOption{
-		Encoder: consoleEncoder,
-		Writer:  fileWriter,
-		Level:   zap.DebugLevel,
-	}
-	return opt
+	msg = fmt.Sprintf(msg, v...)
+	return msg
 }
